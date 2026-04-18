@@ -1,0 +1,41 @@
+services:
+  zookeeper-legacy:
+    image: confluentinc/cp-zookeeper:5.5.3
+    container_name: zookeeper-legacy
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka-legacy:
+    image: confluentinc/cp-kafka:5.5.3
+    container_name: kafka-legacy
+    depends_on:
+      - zookeeper-legacy
+    ports:
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-legacy:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-legacy:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  jupyter-legacy:
+    build:
+      context: .
+      dockerfile: Dockerfile.jupyter.legacy
+    image: local/jupyter-spark-legacy:2.4.8
+    container_name: jupyter-legacy
+    user: root
+    ports:
+      - "8890:8888"
+    volumes:
+      - ./notebooks:/home/notebooks
+    environment:
+      PYSPARK_PYTHON: python3
+      PYSPARK_DRIVER_PYTHON: python3
+      PYSPARK_SUBMIT_ARGS: --conf spark.serializer=org.apache.spark.serializer.JavaSerializer --packages org.apache.spark:spark-streaming-kafka-0-8_2.11:2.4.8 pyspark-shell
+      LEGACY_KAFKA_BOOTSTRAP: kafka-legacy:9092
+    depends_on:
+      - kafka-legacy

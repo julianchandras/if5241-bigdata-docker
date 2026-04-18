@@ -1,3 +1,4 @@
 **/hadoop
 **/notebooks
 **/.DS_Store
+.venv
